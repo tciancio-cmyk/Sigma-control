@@ -1,12 +1,17 @@
 import streamlit as st
-
-try:
-    from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
-    st.success("✅ Import kpi OK")
-except Exception as e:
-    st.error(f"❌ Import error: {e}")
 import pandas as pd
 
+# DEBUG IMPORT
+try:
+    from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
+    from engine.model import value, sigma, priority_score
+    from engine.decision import diagnose
+
+    st.success("✅ All imports OK")
+
+except Exception as e:
+    st.error(f"❌ Import error: {e}")
+    st.stop()   # 🔴 BLOCCA TUTTO SE ERRORE
 from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
 from engine.model import value, sigma, priority_score
 from engine.decision import diagnose
