@@ -11,11 +11,8 @@ try:
 
 except Exception as e:
     st.error(f"❌ Import error: {e}")
-    st.stop()   # 🔴 BLOCCA TUTTO SE ERRORE
-from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
-from engine.model import value, sigma, priority_score
-from engine.decision import diagnose
-
+    st.stop()   
+    
 st.set_page_config(layout="wide")
 st.title("Construction Portfolio Control – Sigma Engine")
 
