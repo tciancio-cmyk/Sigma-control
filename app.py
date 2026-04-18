@@ -1,4 +1,10 @@
 import streamlit as st
+
+try:
+    from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
+    st.success("✅ Import kpi OK")
+except Exception as e:
+    st.error(f"❌ Import error: {e}")
 import pandas as pd
 
 from engine.kpi import flow, rework_index, saturation, productivity, DEFINITIONS
