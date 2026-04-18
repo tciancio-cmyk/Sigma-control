@@ -1,41 +1,28 @@
-# KPI INPUT PER PROGETTO
+for i in range(int(num_projects)):
 
-incomplete = st.number_input(f"Incomplete tasks {name}", 0, 100, 10)
-interference = st.number_input(f"Interferences {name}", 0, 50, 5)
-changes = st.number_input(f"Priority changes {name}", 0, 20, 3)
-rework = st.number_input(f"Rework % {name}", 0.0, 100.0, 10.0)
-saturation = st.number_input(f"Saturation % {name}", 0.0, 120.0, 85.0)
+    st.subheader(f"Project {i+1}")
 
-# SOGLIE (baseline ingegneristica)
-max_values = {
-    "incomplete": 30,
-    "interference": 10,
-    "changes": 5,
-    "rework": 20,
-    "saturation": 100
-}
+    name = st.text_input(f"Project Name {i+1}", key=f"name_{i}")
 
-# PESI (puoi adattarli)
-weights = {
-    "incomplete": 1.2,
-    "interference": 1.5,
-    "changes": 1.0,
-    "rework": 2.0,
-    "saturation": 1.3
-}
+    if name:
 
-# NORMALIZZAZIONE
-norm_incomplete = incomplete / max_values["incomplete"]
-norm_interference = interference / max_values["interference"]
-norm_changes = changes / max_values["changes"]
-norm_rework = rework / max_values["rework"]
-norm_saturation = saturation / max_values["saturation"]
+        col1, col2, col3 = st.columns(3)
 
-# SIGMA CALCOLATO
-sigma = (
-    weights["incomplete"] * norm_incomplete +
-    weights["interference"] * norm_interference +
-    weights["changes"] * norm_changes +
-    weights["rework"] * norm_rework +
-    weights["saturation"] * norm_saturation
-)
+        with col1:
+            incomplete = st.number_input(f"Incomplete {name}", 0, 100, 10)
+
+        with col2:
+            interference = st.number_input(f"Interference {name}", 0, 50, 5)
+
+        with col3:
+            changes = st.number_input(f"Changes {name}", 0, 20, 3)
+
+        col4, col5 = st.columns(2)
+
+        with col4:
+            rework = st.number_input(f"Rework % {name}", 0.0, 100.0, 10.0)
+
+        with col5:
+            saturation = st.number_input(f"Saturation % {name}", 0.0, 120.0, 85.0)
+
+        # CALCOLO SIGMA QUI
