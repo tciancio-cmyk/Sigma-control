@@ -2,174 +2,106 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(layout="wide")
-st.title("Construction Portfolio Control – Sigma Engine (Engineering Model)")
+st.title("Construction Portfolio Control – Sigma + Decision Engine")
 
-# -------------------------
-# NUMERO CANTIERI
-# -------------------------
-num_projects = st.number_input(
-    "Number of Projects",
-    min_value=1,
-    max_value=10,
-    value=2,
-    help="Numero totale di cantieri da analizzare"
-)
+num_projects = st.number_input("Number of Projects", 1, 10, 2)
 
 projects = []
 
-# -------------------------
-# LOOP PROGETTI
-# -------------------------
 for i in range(int(num_projects)):
 
     st.markdown("---")
-    name = st.text_input(f"Project {i+1}", key=f"name_{i}", help="Nome cantiere / progetto")
+    name = st.text_input(f"Project {i+1}", key=f"name_{i}")
 
     if name:
 
         st.markdown(f"## {name}")
 
         # =========================
-        # RIGA 1 – PRODUZIONE / FLUSSO
+        # FLOW KPI
         # =========================
         col1, col2, col3 = st.columns(3)
 
-        # -------- INCOMPLETE --------
         with col1:
-            st.markdown("### Incomplete Index")
-            planned = st.number_input(
-                "Planned",
-                1, 1000, 100,
-                key=f"p_{i}",
-                help="Numero attività pianificate nel periodo (giorno/settimana)"
-            )
-            open_t = st.number_input(
-                "Open",
-                0, 500, 10,
-                key=f"o_{i}",
-                help="Attività iniziate ma non completate"
-            )
-            blocked = st.number_input(
-                "Blocked",
-                0, 500, 5,
-                key=f"b_{i}",
-                help="Attività ferme per vincoli (accesso, materiali, approvazioni)"
-            )
-            reopened = st.number_input(
-                "Reopened",
-                0, 500, 2,
-                key=f"r_{i}",
-                help="Attività riaperte per errori o difetti"
-            )
-
+            st.markdown("### Incomplete")
+            planned = st.number_input("Planned", 1, 1000, 100, key=f"p_{i}")
+            open_t = st.number_input("Open", 0, 500, 10, key=f"o_{i}")
+            blocked = st.number_input("Blocked", 0, 500, 5, key=f"b_{i}")
+            reopened = st.number_input("Reopened", 0, 500, 2, key=f"r_{i}")
             incomplete = (open_t + blocked + reopened) / planned
 
-        # -------- INTERFERENCE --------
         with col2:
-            st.markdown("### Interference Index")
-            interferences = st.number_input(
-                "Interferences",
-                0, 100, 5,
-                key=f"int_{i}",
-                help="Numero di conflitti operativi tra squadre o attività"
-            )
-            workfronts = st.number_input(
-                "Workfronts",
-                1, 50, 10,
-                key=f"wf_{i}",
-                help="Numero di fronti attivi contemporaneamente"
-            )
-
+            st.markdown("### Interference")
+            interferences = st.number_input("Interferences", 0, 100, 5, key=f"int_{i}")
+            workfronts = st.number_input("Workfronts", 1, 50, 10, key=f"wf_{i}")
             interference = interferences / workfronts
 
-        # -------- PRIORITY --------
         with col3:
             st.markdown("### Priority Instability")
-            changes = st.number_input(
-                "Unplanned changes",
-                0, 50, 3,
-                key=f"ch_{i}",
-                help="Numero modifiche non pianificate al programma"
-            )
-
+            changes = st.number_input("Unplanned changes", 0, 50, 3, key=f"ch_{i}")
             priority_index = changes / planned
 
         # =========================
-        # RIGA 2 – QUALITÀ / RISORSE / VALORE
+        # QUALITY + RESOURCES
         # =========================
-        col4, col5, col6 = st.columns(3)
+        col4, col5 = st.columns(2)
 
-        # -------- REWORK --------
         with col4:
-            st.markdown("### Rework Index")
-            rework_qty = st.number_input(
-                "Rework qty",
-                0.0, 10000.0, 50.0,
-                key=f"rw_{i}",
-                help="Quantità di lavoro rifatto (m3, m2, ton, ecc.)"
-            )
-            total_qty = st.number_input(
-                "Total executed",
-                1.0, 10000.0, 500.0,
-                key=f"tot_{i}",
-                help="Produzione totale eseguita nello stesso periodo"
-            )
-
+            st.markdown("### Rework")
+            rework_qty = st.number_input("Rework qty", 0.0, 10000.0, 50.0, key=f"rw_{i}")
+            total_qty = st.number_input("Total qty", 1.0, 10000.0, 500.0, key=f"tot_{i}")
             rework = rework_qty / total_qty
 
-        # -------- SATURATION --------
         with col5:
-            st.markdown("### Resource Saturation")
-            equipment = st.slider(
-                "Equipment %",
-                0, 120, 80,
-                key=f"eq_{i}",
-                help="Utilizzo macchine critiche (%)"
-            )
-            manpower = st.slider(
-                "Manpower %",
-                0, 120, 85,
-                key=f"mp_{i}",
-                help="Utilizzo forza lavoro (%)"
-            )
-            logistics = st.slider(
-                "Logistics",
-                0, 10, 3,
-                key=f"log_{i}",
-                help="Congestione logistica (0 = fluido, 10 = critico)"
-            )
+            st.markdown("### Saturation (Hours-Based)")
+            equip_avail = st.number_input("Equip avail h", 1.0, 10000.0, 100.0, key=f"ea_{i}")
+            equip_used = st.number_input("Equip used h", 0.0, 10000.0, 80.0, key=f"eu_{i}")
 
-            saturation = 0.4*(equipment/100) + 0.4*(manpower/100) + 0.2*(logistics/10)
+            man_avail = st.number_input("Man avail h", 1.0, 10000.0, 100.0, key=f"ma_{i}")
+            man_used = st.number_input("Man used h", 0.0, 10000.0, 85.0, key=f"mu_{i}")
 
-        # -------- VALUE --------
+            logistics = st.slider("Logistics", 0, 10, 3, key=f"log_{i}")
+
+            E = min(equip_used / equip_avail, 1.2)
+            M = min(man_used / man_avail, 1.2)
+            L = logistics / 10
+
+            saturation = 0.4*E + 0.4*M + 0.2*L
+
+        # =========================
+        # PRODUCTIVITY
+        # =========================
+        col6, col7 = st.columns(2)
+
         with col6:
-            st.markdown("### Value / Impact")
-            contract = st.slider(
-                "Contract weight",
-                1, 10, 5,
-                key=f"c_{i}",
-                help="% importanza del contratto nel portfolio"
-            )
-            delay = st.slider(
-                "Delay impact",
-                0, 100, 10,
-                key=f"d_{i}",
-                help="Giorni di ritardo potenziale"
-            )
-            client = st.slider(
-                "Client criticality",
-                1, 10, 5,
-                key=f"cl_{i}",
-                help="Sensibilità cliente / visibilità progetto"
-            )
-            cost = st.slider(
-                "Cost exposure",
-                1, 10, 5,
-                key=f"co_{i}",
-                help="Rischio economico associato"
-            )
+            st.markdown("### Equipment Productivity")
+            output_e = st.number_input("Actual output E", 0.0, 100000.0, 500.0, key=f"oe_{i}")
+            rate_e = st.number_input("Std rate E", 0.1, 1000.0, 10.0, key=f"re_{i}")
+            PI_e = output_e / (rate_e * equip_used) if equip_used > 0 else 0
 
-            value = 0.3*contract + 0.3*(delay/10) + 0.2*client + 0.2*cost
+        with col7:
+            st.markdown("### Manpower Productivity")
+            output_m = st.number_input("Actual output M", 0.0, 100000.0, 500.0, key=f"om_{i}")
+            rate_m = st.number_input("Std rate M", 0.1, 1000.0, 8.0, key=f"rm_{i}")
+            PI_m = output_m / (rate_m * man_used) if man_used > 0 else 0
+
+        PI_total = 0.5 * PI_e + 0.5 * PI_m
+
+        # =========================
+        # VALUE
+        # =========================
+        col8, col9, col10, col11 = st.columns(4)
+
+        with col8:
+            contract = st.slider("Contract", 1, 10, 5, key=f"c_{i}")
+        with col9:
+            delay = st.slider("Delay", 0, 100, 10, key=f"d_{i}")
+        with col10:
+            client = st.slider("Client", 1, 10, 5, key=f"cl_{i}")
+        with col11:
+            cost = st.slider("Cost", 1, 10, 5, key=f"co_{i}")
+
+        value = 0.3*contract + 0.3*(delay/10) + 0.2*client + 0.2*cost
 
         # =========================
         # SIGMA
@@ -179,7 +111,8 @@ for i in range(int(num_projects)):
             "interference": 1.5,
             "priority": 1.0,
             "rework": 2.0,
-            "saturation": 1.3
+            "saturation": 1.3,
+            "productivity": 1.5
         }
 
         sigma = (
@@ -187,20 +120,50 @@ for i in range(int(num_projects)):
             weights["interference"] * interference +
             weights["priority"] * priority_index +
             weights["rework"] * rework +
-            weights["saturation"] * saturation
+            weights["saturation"] * saturation +
+            weights["productivity"] * (1 - PI_total)
         )
 
         priority_score = sigma * value
 
+        # =========================
+        # DECISION ENGINE
+        # =========================
+        drivers = {
+            "Incomplete": incomplete,
+            "Interference": interference,
+            "Priority": priority_index,
+            "Rework": rework,
+            "Saturation": saturation,
+            "Productivity Loss": (1 - PI_total)
+        }
+
+        main_driver = max(drivers, key=drivers.get)
+
+        def get_actions(driver):
+            if driver == "Incomplete":
+                return ["Reduce WIP", "Close tasks", "Limit fronts"]
+            if driver == "Interference":
+                return ["Resequence", "Separate crews", "Fix logistics"]
+            if driver == "Priority":
+                return ["Freeze plan", "Limit changes"]
+            if driver == "Rework":
+                return ["Stop work", "Increase QC"]
+            if driver == "Saturation":
+                return ["Reduce load", "Add resources"]
+            if driver == "Productivity Loss":
+                return ["Improve method", "Train team"]
+            return []
+
+        actions = get_actions(main_driver)
+
         projects.append({
             "Project": name,
             "Sigma": sigma,
-            "Value": value,
             "Priority": priority_score,
-            "Incomplete": incomplete,
-            "Interference": interference,
-            "Rework": rework,
-            "Saturation": saturation
+            "Driver": main_driver,
+            "PI": PI_total,
+            "Actions": ", ".join(actions)
         })
 
 # =========================
@@ -218,30 +181,15 @@ if projects:
 
     st.header("Decision Focus")
 
-    colA, colB, colC = st.columns(3)
+    st.metric("Project", top["Project"])
+    st.metric("Sigma", round(top["Sigma"], 2))
+    st.metric("Priority", round(top["Priority"], 2))
+    st.metric("Main Issue", top["Driver"])
+    st.metric("Productivity", round(top["PI"], 2))
 
-    colA.metric("Critical Project", top["Project"])
-    colB.metric("Sigma", round(top["Sigma"], 2))
-    colC.metric("Priority", round(top["Priority"], 2))
-
-    if top["Sigma"] < 1:
-        st.success("STABLE")
-    elif top["Sigma"] < 2:
-        st.warning("ATTENTION")
-    else:
-        st.error("CRITICAL")
-
-    # Breakdown
-    st.header("Sigma Breakdown")
-
-    breakdown = {
-        "Incomplete": top["Incomplete"],
-        "Interference": top["Interference"],
-        "Rework": top["Rework"],
-        "Saturation": top["Saturation"]
-    }
-
-    st.bar_chart(pd.DataFrame.from_dict(breakdown, orient="index"))
+    st.markdown("### Actions")
+    for a in top["Actions"].split(","):
+        st.write(f"- {a}")
 
 else:
-    st.info("Insert at least one project")
+    st.info("Insert projects")
