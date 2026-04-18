@@ -1,57 +1,83 @@
 import streamlit as st
+import pandas as pd
 
-st.title("Construction Portfolio Control – Director Level")
+st.set_page_config(layout="wide")
 
-projects = ["Project A", "Project B", "Project C", "Project D"]
+st.title("Construction Portfolio Control – Senior Director")
 
-results = []
+# -------------------------
+# INPUT: numero cantieri
+# -------------------------
+num_projects = st.number_input("Number of Projects", min_value=1, max_value=20, value=3)
 
-for p in projects:
-    st.header(p)
+projects_data = []
 
-    col1, col2 = st.columns(2)
+st.header("Project Input")
+
+for i in range(int(num_projects)):
+    st.subheader(f"Project {i+1}")
+
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        sigma = st.slider(f"Sigma {p}", 0.0, 10.0, 3.0)
+        name = st.text_input(f"Project Name {i+1}", key=f"name_{i}")
 
     with col2:
-        value = st.slider(f"Value / Impact {p}", 1.0, 10.0, 5.0)
+        sigma = st.slider(f"Sigma {i+1}", 0.0, 10.0, 3.0, key=f"sigma_{i}")
+
+    with col3:
+        value = st.slider(f"Value / Impact {i+1}", 1.0, 10.0, 5.0, key=f"value_{i}")
 
     priority = sigma * value
 
-    results.append({
-        "project": p,
-        "sigma": sigma,
-        "value": value,
-        "priority": priority
-    })
+    if name:  # evita campi vuoti
+        projects_data.append({
+            "Project": name,
+            "Sigma": sigma,
+            "Value": value,
+            "Priority": priority
+        })
 
 # -------------------------
-# GLOBAL RANKING
+# ANALISI
 # -------------------------
-st.header("Priority Ranking")
+if projects_data:
+    df = pd.DataFrame(projects_data)
 
-sorted_results = sorted(results, key=lambda x: x["priority"], reverse=True)
+    st.header("Portfolio Ranking")
 
-for r in sorted_results:
-    st.write(
-        f"{r['project']} → Priority: {round(r['priority'],2)} "
-        f"(σ={r['sigma']}, V={r['value']})"
-    )
+    df_sorted = df.sort_values(by="Priority", ascending=False)
 
-# -------------------------
-# DECISION
-# -------------------------
-top = sorted_results[0]
+    st.dataframe(df_sorted, use_container_width=True)
 
-st.header("Action Focus")
+    # -------------------------
+    # CRITICAL PROJECT
+    # -------------------------
+    top = df_sorted.iloc[0]
 
-st.metric("Critical Project", top["project"])
-st.metric("Priority Score", round(top["priority"], 2))
+    st.header("Decision Focus")
 
-if top["sigma"] < 3:
-    st.success("LOW RISK → Monitor")
-elif top["sigma"] < 6:
-    st.warning("MEDIUM RISK → Stabilize")
+    colA, colB, colC = st.columns(3)
+
+    colA.metric("Critical Project", top["Project"])
+    colB.metric("Sigma", round(top["Sigma"], 2))
+    colC.metric("Priority Score", round(top["Priority"], 2))
+
+    # -------------------------
+    # DECISION LOGIC
+    # -------------------------
+    if top["Sigma"] < 3:
+        st.success("LOW RISK → Monitor")
+    elif top["Sigma"] < 6:
+        st.warning("MEDIUM RISK → Stabilize")
+    else:
+        st.error("HIGH RISK → Immediate Intervention")
+
+    # -------------------------
+    # VISUAL
+    # -------------------------
+    st.header("Portfolio Visualization")
+    st.scatter_chart(df_sorted.set_index("Project")[["Sigma", "Priority"]])
+
 else:
-    st.error("HIGH RISK → Immediate Intervention")
+    st.info("Insert at least one project name to activate analysis")
