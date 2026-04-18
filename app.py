@@ -6,16 +6,30 @@ from engine.model import value, sigma, priority_score
 from engine.decision import diagnose
 
 st.set_page_config(layout="wide")
-st.title("Sigma Control – Enterprise Version")
+st.title("Construction Portfolio Control – Sigma Engine")
 
-n = st.number_input("Projects", 1, 10, 2)
+st.markdown("""
+### Model Logic
+This system evaluates construction performance through:
+- Flow stability
+- Quality
+- Resource saturation (hours-based)
+- Productivity
+
+Output:
+- Sigma (instability)
+- Priority (where to act)
+- Root cause + actions
+""")
+
+n = st.number_input("Number of Projects", 1, 10, 2)
 
 results = []
 
 for i in range(int(n)):
 
     st.markdown("---")
-    name = st.text_input(f"Project {i+1}", key=f"name_{i}", help="Project name")
+    name = st.text_input("Project Name", key=f"name_{i}")
 
     if not name:
         continue
@@ -71,7 +85,7 @@ for i in range(int(n)):
     with c11:
         cost = st.slider("Cost", 1, 10, 5, key=f"co_{i}", help=DEFINITIONS["cost"])
 
-    # --- ENGINE ---
+    # ENGINE
     incomplete, interference, priority = flow(planned, open_t, blocked, reopened, interferences, workfronts, changes)
     rework = rework_index(rework_qty, total_qty)
     sat = saturation(equip_used, equip_avail, man_used, man_avail, logistics)
@@ -91,16 +105,25 @@ for i in range(int(n)):
         "Sigma": sig,
         "Priority": prio,
         "Driver": driver,
-        "PI": PI,
+        "Productivity": PI,
         "Actions": ", ".join(actions)
     })
 
-# --- OUTPUT ---
 if results:
     df = pd.DataFrame(results).sort_values(by="Priority", ascending=False)
+
     st.markdown("---")
+    st.header("Portfolio Ranking")
     st.dataframe(df, use_container_width=True)
 
     top = df.iloc[0]
-    st.markdown("## Decision Focus")
-    st.write(top)
+
+    st.header("Decision Focus")
+    st.metric("Project", top["Project"])
+    st.metric("Sigma", round(top["Sigma"], 2))
+    st.metric("Priority", round(top["Priority"], 2))
+    st.metric("Main Issue", top["Driver"])
+
+    st.markdown("### Actions")
+    for a in top["Actions"].split(","):
+        st.write(f"- {a}")
