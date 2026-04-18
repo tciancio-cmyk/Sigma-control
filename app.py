@@ -2,160 +2,120 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(layout="wide")
+st.title("Construction Portfolio Control – Engineering Model")
 
-st.title("Construction Portfolio Control – Sigma Engine")
+num_projects = st.number_input("Number of Projects", 1, 10, 2)
 
-# -------------------------
-# NUMERO CANTIERI
-# -------------------------
-num_projects = st.number_input(
-    "Number of Projects",
-    min_value=1,
-    max_value=20,
-    value=3
-)
+projects = []
 
-projects_data = []
-
-# -------------------------
-# PARAMETRI MODELLO
-# -------------------------
-max_values = {
-    "incomplete": 30,
-    "interference": 10,
-    "changes": 5,
-    "rework": 20,
-    "saturation": 100
-}
-
-weights = {
-    "incomplete": 1.2,
-    "interference": 1.5,
-    "changes": 1.0,
-    "rework": 2.0,
-    "saturation": 1.3
-}
-
-# -------------------------
-# INPUT PROGETTI
-# -------------------------
 for i in range(int(num_projects)):
 
-    st.subheader(f"Project {i+1}")
-
+    st.header(f"Project {i+1}")
     name = st.text_input(f"Project Name {i+1}", key=f"name_{i}")
 
     if name:
 
-        col1, col2, col3 = st.columns(3)
+        # -------------------------
+        # INCOMPLETE
+        # -------------------------
+        planned = st.number_input(f"Planned activities {name}", 1, 1000, 100)
+        open_t = st.number_input(f"Open tasks {name}", 0, 500, 10)
+        blocked = st.number_input(f"Blocked tasks {name}", 0, 500, 5)
+        reopened = st.number_input(f"Reopened tasks {name}", 0, 500, 2)
 
-        with col1:
-            incomplete = st.number_input(f"Incomplete tasks {name}", 0, 100, 10)
-
-        with col2:
-            interference = st.number_input(f"Interferences {name}", 0, 50, 5)
-
-        with col3:
-            changes = st.number_input(f"Priority changes {name}", 0, 20, 3)
-
-        col4, col5 = st.columns(2)
-
-        with col4:
-            rework = st.number_input(f"Rework % {name}", 0.0, 100.0, 10.0)
-
-        with col5:
-            saturation = st.number_input(f"Saturation % {name}", 0.0, 120.0, 85.0)
+        incomplete = (open_t + blocked + reopened) / planned
 
         # -------------------------
-        # NORMALIZZAZIONE
+        # INTERFERENCE
         # -------------------------
-        norm = {
-            "incomplete": incomplete / max_values["incomplete"],
-            "interference": interference / max_values["interference"],
-            "changes": changes / max_values["changes"],
-            "rework": rework / max_values["rework"],
-            "saturation": saturation / max_values["saturation"]
+        interferences = st.number_input(f"Interferences {name}", 0, 100, 5)
+        workfronts = st.number_input(f"Active workfronts {name}", 1, 50, 10)
+
+        interference = interferences / workfronts
+
+        # -------------------------
+        # PRIORITY
+        # -------------------------
+        changes = st.number_input(f"Unplanned changes {name}", 0, 50, 3)
+
+        priority_index = changes / planned
+
+        # -------------------------
+        # REWORK
+        # -------------------------
+        rework_qty = st.number_input(f"Rework quantity {name}", 0.0, 10000.0, 50.0)
+        total_qty = st.number_input(f"Total executed {name}", 1.0, 10000.0, 500.0)
+
+        rework = rework_qty / total_qty
+
+        # -------------------------
+        # SATURATION
+        # -------------------------
+        equipment = st.slider(f"Equipment utilization % {name}", 0, 120, 80)
+        manpower = st.slider(f"Manpower utilization % {name}", 0, 120, 85)
+        logistics = st.slider(f"Logistic congestion {name}", 0, 10, 3)
+
+        saturation = 0.4*(equipment/100) + 0.4*(manpower/100) + 0.2*(logistics/10)
+
+        # -------------------------
+        # SIGMA
+        # -------------------------
+        weights = {
+            "incomplete": 1.2,
+            "interference": 1.5,
+            "priority": 1.0,
+            "rework": 2.0,
+            "saturation": 1.3
         }
 
-        # -------------------------
-        # SIGMA CALCOLATO
-        # -------------------------
-        sigma = sum(weights[k] * norm[k] for k in norm)
+        sigma = (
+            weights["incomplete"] * incomplete +
+            weights["interference"] * interference +
+            weights["priority"] * priority_index +
+            weights["rework"] * rework +
+            weights["saturation"] * saturation
+        )
 
         # -------------------------
-        # PRIORITY (puoi migliorarlo dopo)
+        # VALUE
         # -------------------------
-        value = st.slider(f"Value / Impact {name}", 1.0, 10.0, 5.0)
+        contract = st.slider(f"Contract weight {name}", 1, 10, 5)
+        delay = st.slider(f"Delay impact (days) {name}", 0, 100, 10)
+        client = st.slider(f"Client criticality {name}", 1, 10, 5)
+        cost = st.slider(f"Cost exposure {name}", 1, 10, 5)
 
-        priority = sigma * value
+        value = 0.3*contract + 0.3*(delay/10) + 0.2*client + 0.2*cost
 
-        projects_data.append({
+        priority_score = sigma * value
+
+        projects.append({
             "Project": name,
             "Sigma": sigma,
             "Value": value,
-            "Priority": priority,
-            **norm
+            "Priority": priority_score
         })
 
 # -------------------------
-# ANALISI
+# OUTPUT
 # -------------------------
-if projects_data:
+if projects:
 
-    df = pd.DataFrame(projects_data)
+    df = pd.DataFrame(projects).sort_values(by="Priority", ascending=False)
 
-    # -------------------------
-    # RANKING
-    # -------------------------
     st.header("Portfolio Ranking")
+    st.dataframe(df, use_container_width=True)
 
-    df_sorted = df.sort_values(by="Priority", ascending=False)
-
-    st.dataframe(df_sorted[["Project", "Sigma", "Value", "Priority"]], use_container_width=True)
-
-    # -------------------------
-    # CRITICAL PROJECT
-    # -------------------------
-    top = df_sorted.iloc[0]
+    top = df.iloc[0]
 
     st.header("Decision Focus")
 
-    colA, colB, colC = st.columns(3)
+    st.metric("Critical Project", top["Project"])
+    st.metric("Sigma", round(top["Sigma"],2))
+    st.metric("Priority", round(top["Priority"],2))
 
-    colA.metric("Critical Project", top["Project"])
-    colB.metric("Sigma", round(top["Sigma"], 2))
-    colC.metric("Priority", round(top["Priority"], 2))
-
-    if top["Sigma"] < 3:
-        st.success("LOW RISK → Monitor")
-    elif top["Sigma"] < 6:
-        st.warning("MEDIUM RISK → Stabilize")
+    if top["Sigma"] < 1:
+        st.success("STABLE")
+    elif top["Sigma"] < 2:
+        st.warning("ATTENTION")
     else:
-        st.error("HIGH RISK → Immediate Intervention")
-
-    # -------------------------
-    # BREAKDOWN SIGMA (KEY PART)
-    # -------------------------
-    st.header("Sigma Breakdown (Critical Project)")
-
-    breakdown = {
-        "Incomplete": weights["incomplete"] * top["incomplete"],
-        "Interference": weights["interference"] * top["interference"],
-        "Changes": weights["changes"] * top["changes"],
-        "Rework": weights["rework"] * top["rework"],
-        "Saturation": weights["saturation"] * top["saturation"]
-    }
-
-    breakdown_df = pd.DataFrame.from_dict(breakdown, orient="index", columns=["Contribution"])
-
-    st.bar_chart(breakdown_df)
-
-    # -------------------------
-    # VISUAL PORTFOLIO
-    # -------------------------
-    st.header("Portfolio Map")
-
-    st.scatter_chart(df.set_index("Project")[["Sigma", "Priority"]])
-
-else:
-    st.info("Insert at least one project to start analysis")
+        st.error("CRITICAL")
